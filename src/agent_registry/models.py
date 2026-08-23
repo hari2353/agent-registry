@@ -10,12 +10,12 @@ class AgentSkill(BaseModel):
 
 
 class AgentCard(BaseModel):
-    name: str
-    description: str = ""
-    url: str
-    version: str = "0.1.0"
-    skills: list[AgentSkill] = Field(default_factory=list)
-    capabilities: list[str] = Field(default_factory=list)
+    name: str = Field(max_length=128)
+    description: str = Field(default="", max_length=2000)
+    url: str = Field(max_length=500)
+    version: str = Field(default="0.1.0", max_length=32)
+    skills: list[AgentSkill] = Field(default_factory=list, max_length=50)
+    capabilities: list[str] = Field(default_factory=list, max_length=25)
 
     @property
     def skill_names(self) -> list[str]:
