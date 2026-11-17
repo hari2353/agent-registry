@@ -68,6 +68,13 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
         return {"name": name, "verified": agent.verified,
                 "last_probe": agent.last_probe, "probe": agent.probe}
 
+    @app.get("/agents/{name}/history")
+    def history(name: str) -> dict:
+        events = reg.history(name)
+        if events is None:
+            raise HTTPException(status_code=404, detail="unknown agent")
+        return {"name": name, "events": events}
+
     @app.get("/agents")
     def list_agents(include_stale: bool = False) -> list[dict]:
         out = []
