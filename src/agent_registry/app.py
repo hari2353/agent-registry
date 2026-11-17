@@ -15,7 +15,7 @@ OWN_CARD = AgentCard(
 
 
 def create_app(registry: AgentRegistry | None = None) -> FastAPI:
-    app = FastAPI(title="Agent Registry", version="0.1.0")
+    app = FastAPI(title="Agent Registry", version="0.2.0")
     reg = registry or AgentRegistry()
 
     @app.middleware("http")
