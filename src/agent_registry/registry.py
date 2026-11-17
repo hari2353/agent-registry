@@ -66,6 +66,25 @@ class AgentRegistry:
             self._append({"op": "upsert", "agent": agent.model_dump(mode="json")})
             return True
 
+    def record_probe(self, name: str, result: dict) -> bool:
+        """Store a conformance verdict (probe.probe_agent output) on the
+        agent and replay it as an upsert. Unknown names are a no-op."""
+        with self._lock:
+            agent = self._agents.get(name)
+            if agent is None:
+                return False
+            agent.verified = bool(result.get("verified"))
+            agent.last_probe = utc_now_iso()
+            agent.probe = {
+                "verified": agent.verified,
+                "error": result.get("error"),
+                "checked": (result.get("checked") or [])[:25],
+                "mismatched": (result.get("mismatched") or [])[:25],
+                "fetched_at": result.get("fetched_at"),
+            }
+            self._append({"op": "upsert", "agent": agent.model_dump(mode="json")})
+            return True
+
     def get(self, name: str) -> RegisteredAgent | None:
         return self._agents.get(name)
 

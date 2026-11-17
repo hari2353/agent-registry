@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 
 from .brief import build_brief
 from .models import AgentCard
+from .probe import probe_agent
 from .registry import AgentRegistry
 
 OWN_CARD = AgentCard(
@@ -31,16 +32,49 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
     def own_card() -> dict:
         return OWN_CARD.model_dump(mode="json")
 
+    @app.get("/.well-known/agent-card.json")
+    def own_card_2026() -> dict:
+        # IANA-registered well-known path (A2A v0.2+); /agent.json stays as
+        # an alias for cards written against the older convention.
+        return OWN_CARD.model_dump(mode="json")
+
     @app.post("/agents")
-    def register(card: AgentCard) -> dict:
+    def register(card: AgentCard, probe: bool = False) -> dict:
         agent = reg.register(card)
-        return {"name": agent.card.name, "registered_at": agent.registered_at}
+        out = {"name": agent.card.name, "registered_at": agent.registered_at}
+        if probe:
+            result = probe_agent(card)
+            reg.record_probe(agent.card.name, result)
+            agent = reg.get(agent.card.name)
+            out.update({"verified": agent.verified, "last_probe": agent.last_probe,
+                        "probe": agent.probe})
+        return out
+
+    def _agent_view(agent) -> dict:
+        return {"card": agent.card.model_dump(mode="json"),
+                "last_heartbeat": agent.last_heartbeat,
+                "verified": agent.verified,
+                "last_probe": agent.last_probe,
+                "probe": agent.probe}
+
+    @app.post("/agents/{name}/probe")
+    def reprobe(name: str) -> dict:
+        agent = reg.get(name)
+        if agent is None:
+            raise HTTPException(status_code=404, detail="unknown agent")
+        result = probe_agent(agent.card)
+        reg.record_probe(name, result)
+        agent = reg.get(name)
+        return {"name": name, "verified": agent.verified,
+                "last_probe": agent.last_probe, "probe": agent.probe}
 
     @app.get("/agents")
     def list_agents(include_stale: bool = False) -> list[dict]:
         out = []
         for agent in reg.list(include_stale=include_stale):
-            out.append({"card": agent.card.model_dump(mode="json"), "stale": agent.heartbeat_age_seconds() > reg.stale_after_seconds})
+            out.append({"card": agent.card.model_dump(mode="json"),
+                        "stale": agent.heartbeat_age_seconds() > reg.stale_after_seconds,
+                        "verified": agent.verified})
         return out
 
     @app.get("/agents/{name}")
@@ -48,7 +82,7 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
         agent = reg.get(name)
         if agent is None:
             raise HTTPException(status_code=404, detail="unknown agent")
-        return {"card": agent.card.model_dump(mode="json"), "last_heartbeat": agent.last_heartbeat}
+        return _agent_view(agent)
 
     @app.post("/agents/{name}/heartbeat")
     def heartbeat(name: str) -> dict:
