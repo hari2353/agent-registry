@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 
 from .brief import build_brief
+from .diagnostics import Diagnostic
 from .models import AgentCard
 from .probe import probe_agent
 from .registry import AgentRegistry
@@ -12,6 +13,10 @@ OWN_CARD = AgentCard(
     skills=[],
     capabilities=["registry", "heartbeat", "briefs"],
 )
+
+
+def _fail(status: int, code: str, message: str) -> None:
+    raise HTTPException(status_code=status, detail=Diagnostic(code, message).to_dict())
 
 
 def create_app(registry: AgentRegistry | None = None) -> FastAPI:
@@ -61,7 +66,7 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
     def reprobe(name: str) -> dict:
         agent = reg.get(name)
         if agent is None:
-            raise HTTPException(status_code=404, detail="unknown agent")
+            _fail(404, "REG_UNKNOWN_AGENT", "unknown agent")
         result = probe_agent(agent.card)
         reg.record_probe(name, result)
         agent = reg.get(name)
@@ -72,7 +77,7 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
     def history(name: str) -> dict:
         events = reg.history(name)
         if events is None:
-            raise HTTPException(status_code=404, detail="unknown agent")
+            _fail(404, "REG_UNKNOWN_AGENT", "unknown agent")
         return {"name": name, "events": events}
 
     @app.get("/agents")
@@ -88,31 +93,31 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
     def get_agent(name: str) -> dict:
         agent = reg.get(name)
         if agent is None:
-            raise HTTPException(status_code=404, detail="unknown agent")
+            _fail(404, "REG_UNKNOWN_AGENT", "unknown agent")
         return _agent_view(agent)
 
     @app.post("/agents/{name}/heartbeat")
     def heartbeat(name: str) -> dict:
         if not reg.heartbeat(name):
-            raise HTTPException(status_code=404, detail="unknown agent")
+            _fail(404, "REG_UNKNOWN_AGENT", "unknown agent")
         return {"name": name, "heartbeat": "ok"}
 
     @app.delete("/agents/{name}")
     def deregister(name: str) -> dict:
         if not reg.deregister(name):
-            raise HTTPException(status_code=404, detail="unknown agent")
+            _fail(404, "REG_UNKNOWN_AGENT", "unknown agent")
         return {"name": name, "deregistered": True}
 
     @app.post("/briefs")
     def create_brief(payload: dict) -> dict:
         topic = str(payload.get("topic", "")).strip()
         if not topic:
-            raise HTTPException(status_code=422, detail="topic required")
+            _fail(422, "REG_TOPIC_REQUIRED", "topic required")
         context_type = str(payload.get("context_type", "job_description"))
         try:
             brief = build_brief(reg, topic, context_type)
         except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"skills engine unreachable: {exc}")
+            _fail(502, "REG_ENGINE_UNREACHABLE", f"skills engine unreachable: {exc}")
         return brief
 
     return app

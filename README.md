@@ -31,5 +31,8 @@ Part of the agentic stack: `skills-engine` (reasoning over skills) → `skills-m
 - Briefs match skills by token overlap (exact skill-name entries labelled `exact`, fuzzy text matches `partial`, below 0.5 stays an honest gap) and report `coverage_pct`
 - Briefs never fail silently: uncovered skills are returned as `skill_gaps` rather than dropped
 - Engine outage degrades to HTTP 502 with reason — no fabricated recommendations
+- Agent repair contract: probe failures and HTTP rejections carry a stable code, a
+  one-line fix, and a docs pointer in `diagnostic` / `detail`. Catalog:
+  `docs/diagnostics.md`
 
 MIT
