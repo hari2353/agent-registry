@@ -23,6 +23,25 @@ Part of the agentic stack: `skills-engine` (reasoning over skills) → `skills-m
 | GET | `/agents/{name}/history` | bounded event trail (last 20: register/heartbeat/probe/deregister) |
 | POST | `/briefs` | `{topic}` → inferred skills → recommended agents + gaps + `coverage_pct` |
 
+## Benchmark harness (Harvard Edge QuArch cross-pollination)
+
+`agent_registry.benchmark` scores any callable agent against a fixed case set,
+the way QuArch evaluates models: required/forbidden term parsers, per-case
+latency budgets, per-category pass rates, and bounded failure detail. No LLM
+judge, so runs are reproducible.
+
+```python
+from agent_registry.benchmark import BenchmarkCase, run_benchmark
+
+report = run_benchmark(
+    [BenchmarkCase("greet", "say hi", "chat", ("hello",))],
+    call=lambda prompt: my_agent(prompt),
+)
+# {'pass_rate': ..., 'p95_latency_s': ..., 'categories': {...}, 'failures': [...]}
+```
+
+An agent exception becomes a failed case, not a crashed benchmark.
+
 ## Design notes
 
 - Registry is append-only JSONL with op replay (`upsert` / `deregister`) — crash-safe persistence without a DB; auto-compacted to a snapshot after 1000 ops
