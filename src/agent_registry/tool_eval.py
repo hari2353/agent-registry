@@ -3,6 +3,7 @@
 Scores whether an agent invoked the expected tools with the expected
 arguments, independent of its final text. Pure, deterministic, no judge model.
 """
+
 from __future__ import annotations
 
 
@@ -28,9 +29,13 @@ def tool_use_score(predicted: list[dict], gold: list[dict]) -> dict:
     gold_counter = Counter(gold_keys)
     matched = sum((pred_counter & gold_counter).values())
 
-    precision = matched / len(pred_keys) if pred_keys else (1.0 if not gold_keys else 0.0)
+    precision = (
+        matched / len(pred_keys) if pred_keys else (1.0 if not gold_keys else 0.0)
+    )
     recall = matched / len(gold_keys) if gold_keys else (1.0 if not pred_keys else 0.0)
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    f1 = (
+        (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    )
     exact = pred_keys == gold_keys and len(pred_keys) == len(gold_keys)
     return {
         "predicted": len(pred_keys),

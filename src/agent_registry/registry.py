@@ -8,14 +8,17 @@ from pathlib import Path
 
 from .models import AgentCard, RegisteredAgent, utc_now_iso
 
-EVENTS_MAX = 20          # bounded per-agent history: last 20 events
-COMPACT_AFTER = 1000     # appends before the op-log is snapshotted
+EVENTS_MAX = 20  # bounded per-agent history: last 20 events
+COMPACT_AFTER = 1000  # appends before the op-log is snapshotted
 
 
 class AgentRegistry:
-    def __init__(self, persistence_path: Path | None = None,
-                 stale_after_seconds: float = 900.0,
-                 compact_after: int = COMPACT_AFTER) -> None:
+    def __init__(
+        self,
+        persistence_path: Path | None = None,
+        stale_after_seconds: float = 900.0,
+        compact_after: int = COMPACT_AFTER,
+    ) -> None:
         self._agents: dict[str, RegisteredAgent] = {}
         self._events: dict[str, deque] = {}
         # RLock: _append runs under a caller's lock and auto-compaction
@@ -51,12 +54,15 @@ class AgentRegistry:
                     # kind distinguishes register/heartbeat/probe upserts;
                     # records written before kinds existed default to register
                     kind = record.get("kind", "register")
-                    at = {"register": agent.registered_at,
-                          "heartbeat": agent.last_heartbeat,
-                          "probe": agent.last_probe or agent.last_heartbeat}[kind]
+                    at = {
+                        "register": agent.registered_at,
+                        "heartbeat": agent.last_heartbeat,
+                        "probe": agent.last_probe or agent.last_heartbeat,
+                    }[kind]
                     if kind == "probe":
-                        self._note(agent.card.name, "probe", at=at,
-                                   verified=agent.verified)
+                        self._note(
+                            agent.card.name, "probe", at=at, verified=agent.verified
+                        )
                     else:
                         self._note(agent.card.name, kind, at=at)
 
@@ -80,13 +86,20 @@ class AgentRegistry:
             return 0
         with self._lock:
             tmp = self.persistence_path.with_suffix(
-                self.persistence_path.suffix + ".tmp")
+                self.persistence_path.suffix + ".tmp"
+            )
             with tmp.open("w", encoding="utf-8") as fh:
-                for agent in sorted(self._agents.values(),
-                                    key=lambda a: a.card.name):
-                    fh.write(json.dumps(
-                        {"op": "upsert", "kind": "register",
-                         "agent": agent.model_dump(mode="json")}) + "\n")
+                for agent in sorted(self._agents.values(), key=lambda a: a.card.name):
+                    fh.write(
+                        json.dumps(
+                            {
+                                "op": "upsert",
+                                "kind": "register",
+                                "agent": agent.model_dump(mode="json"),
+                            }
+                        )
+                        + "\n"
+                    )
             os.replace(tmp, self.persistence_path)
             self._appends_since_compact = 0
             return len(self._agents)
@@ -101,8 +114,13 @@ class AgentRegistry:
                 last_heartbeat=now,
             )
             self._agents[card.name] = agent
-            self._append({"op": "upsert", "kind": "register",
-                          "agent": agent.model_dump(mode="json")})
+            self._append(
+                {
+                    "op": "upsert",
+                    "kind": "register",
+                    "agent": agent.model_dump(mode="json"),
+                }
+            )
             self._note(card.name, "register", at=now)
             return agent
 
@@ -121,8 +139,13 @@ class AgentRegistry:
             if agent is None:
                 return False
             agent.last_heartbeat = utc_now_iso()
-            self._append({"op": "upsert", "kind": "heartbeat",
-                          "agent": agent.model_dump(mode="json")})
+            self._append(
+                {
+                    "op": "upsert",
+                    "kind": "heartbeat",
+                    "agent": agent.model_dump(mode="json"),
+                }
+            )
             self._note(name, "heartbeat", at=agent.last_heartbeat)
             return True
 
@@ -142,10 +165,14 @@ class AgentRegistry:
                 "mismatched": (result.get("mismatched") or [])[:25],
                 "fetched_at": result.get("fetched_at"),
             }
-            self._append({"op": "upsert", "kind": "probe",
-                          "agent": agent.model_dump(mode="json")})
-            self._note(name, "probe", at=agent.last_probe,
-                       verified=agent.verified)
+            self._append(
+                {
+                    "op": "upsert",
+                    "kind": "probe",
+                    "agent": agent.model_dump(mode="json"),
+                }
+            )
+            self._note(name, "probe", at=agent.last_probe, verified=agent.verified)
             return True
 
     def history(self, name: str) -> list[dict] | None:
@@ -161,11 +188,18 @@ class AgentRegistry:
     def list(self, include_stale: bool = False) -> list[RegisteredAgent]:
         out = []
         for agent in self._agents.values():
-            if not include_stale and agent.heartbeat_age_seconds() > self.stale_after_seconds:
+            if (
+                not include_stale
+                and agent.heartbeat_age_seconds() > self.stale_after_seconds
+            ):
                 continue
             out.append(agent)
         return sorted(out, key=lambda a: a.card.name)
 
     def find_by_skill(self, skill_name: str) -> list[RegisteredAgent]:
         needle = skill_name.casefold()
-        return [a for a in self.list() if any(needle == s.casefold() for s in a.card.skill_names)]
+        return [
+            a
+            for a in self.list()
+            if any(needle == s.casefold() for s in a.card.skill_names)
+        ]

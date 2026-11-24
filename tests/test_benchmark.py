@@ -8,11 +8,14 @@ CASES = [
 
 
 def test_all_cases_pass():
-    out = run_benchmark(CASES, lambda prompt: {
-        "say hi": "Hello there",
-        "summarize": "Summary ready",
-        "find python": "Python role",
-    }[prompt])
+    out = run_benchmark(
+        CASES,
+        lambda prompt: {
+            "say hi": "Hello there",
+            "summarize": "Summary ready",
+            "find python": "Python role",
+        }[prompt],
+    )
     assert out["passed"] == 3
     assert out["pass_rate"] == 1.0
     assert out["failures"] == []
@@ -44,7 +47,9 @@ def test_latency_budget_is_enforced():
 
 
 def test_agent_exception_is_a_failed_case():
-    out = run_benchmark([CASES[0]], lambda prompt: (_ for _ in ()).throw(RuntimeError("down")))
+    out = run_benchmark(
+        [CASES[0]], lambda prompt: (_ for _ in ()).throw(RuntimeError("down"))
+    )
     assert out["passed"] == 0
     assert "error: down" in out["failures"][0]["reason"]
 

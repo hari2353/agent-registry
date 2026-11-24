@@ -12,7 +12,10 @@ def test_perfect_match():
 
 
 def test_missing_call_lowers_recall():
-    gold = [{"tool": "search", "args": {"q": "x"}}, {"tool": "read", "args": {"id": "1"}}]
+    gold = [
+        {"tool": "search", "args": {"q": "x"}},
+        {"tool": "read", "args": {"id": "1"}},
+    ]
     pred = [{"tool": "search", "args": {"q": "x"}}]
     out = tool_use_score(pred, gold)
     assert out["recall"] == 0.5
@@ -21,7 +24,10 @@ def test_missing_call_lowers_recall():
 
 def test_extra_call_lowers_precision():
     gold = [{"tool": "search", "args": {"q": "x"}}]
-    pred = [{"tool": "search", "args": {"q": "x"}}, {"tool": "read", "args": {"id": "1"}}]
+    pred = [
+        {"tool": "search", "args": {"q": "x"}},
+        {"tool": "read", "args": {"id": "1"}},
+    ]
     out = tool_use_score(pred, gold)
     assert out["precision"] == 0.5
     assert out["recall"] == 1.0

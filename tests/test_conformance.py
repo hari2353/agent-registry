@@ -11,6 +11,7 @@ SSRF posture: agent URLs are untrusted data (SECURITY.md). The probe allows
 only http/https, uses a short timeout, and caps the response body — the
 result is data, never a redirect to follow blindly.
 """
+
 import json
 
 import pytest
@@ -23,7 +24,9 @@ def client(tmp_path):
     from agent_registry.app import create_app
     from agent_registry.registry import AgentRegistry
 
-    return TestClient(create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl")))
+    return TestClient(
+        create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl"))
+    )
 
 
 CARD = {
@@ -44,8 +47,11 @@ class FakeResp:
 def test_probe_verifies_matching_card(monkeypatch):
     from agent_registry import probe as probe_module
 
-    served = {"name": "resume-screener", "url": "http://screener.local/a2a",
-              "skills": [{"name": "Python"}]}
+    served = {
+        "name": "resume-screener",
+        "url": "http://screener.local/a2a",
+        "skills": [{"name": "Python"}],
+    }
     seen = {}
 
     def fake_get(url, **kw):
@@ -63,11 +69,14 @@ def test_probe_verifies_matching_card(monkeypatch):
 def test_probe_flags_mismatched_skills(monkeypatch):
     from agent_registry import probe as probe_module
 
-    served = {"name": "resume-screener",
-              "skills": [{"name": "Docker"}]}          # registered: Python
+    served = {
+        "name": "resume-screener",
+        "skills": [{"name": "Docker"}],
+    }  # registered: Python
 
     result = probe_module.probe_agent(
-        _card(), transport=lambda url, **kw: json.dumps(served))
+        _card(), transport=lambda url, **kw: json.dumps(served)
+    )
     assert result["verified"] is False
     assert any("python" in m.casefold() for m in result["mismatched"])
     assert result["error"] is None
@@ -78,7 +87,8 @@ def test_probe_reports_reachable_but_wrong_agent(monkeypatch):
 
     served = {"name": "someone-elses-agent", "skills": [{"name": "Python"}]}
     result = probe_module.probe_agent(
-        _card(), transport=lambda url, **kw: json.dumps(served))
+        _card(), transport=lambda url, **kw: json.dumps(served)
+    )
     assert result["verified"] is False
     assert result["error"] is None
 
@@ -88,14 +98,14 @@ def test_probe_bounded_body_and_bad_payload(monkeypatch):
 
     # garbage body → error, never a crash
     result = probe_module.probe_agent(
-        _card(), transport=lambda url, **kw: "<html>not json</html>")
+        _card(), transport=lambda url, **kw: "<html>not json</html>"
+    )
     assert result["verified"] is False
     assert result["error"]
 
     # bodies over the 64KB cap are rejected outright — agent cards are
     # 0.3-1KB (arXiv 2508.03095); anything bigger is not a card
-    r2 = probe_module.probe_agent(
-        _card(), transport=lambda url, **kw: "x" * 70_000)
+    r2 = probe_module.probe_agent(_card(), transport=lambda url, **kw: "x" * 70_000)
     assert r2["verified"] is False
     assert "64kb" in r2["error"].casefold()
 
@@ -114,6 +124,7 @@ def test_probe_translates_transport_errors(monkeypatch):
 
     def boom(url, **kw):
         raise RuntimeError("connection refused")
+
     result = probe_module.probe_agent(_card(), transport=boom)
     assert result["verified"] is False
     assert "connection refused" in result["error"]
@@ -121,13 +132,23 @@ def test_probe_translates_transport_errors(monkeypatch):
 
 # --------------------------------------------------- api: probe on register
 def _ok_probe():
-    return {"verified": True, "error": None, "mismatched": [], "checked": ["name"],
-            "fetched_at": "2026-11-17T00:00:00+00:00"}
+    return {
+        "verified": True,
+        "error": None,
+        "mismatched": [],
+        "checked": ["name"],
+        "fetched_at": "2026-11-17T00:00:00+00:00",
+    }
 
 
 def _dead_probe():
-    return {"verified": False, "error": "connection refused", "mismatched": [],
-            "checked": [], "fetched_at": "2026-11-17T00:00:00+00:00"}
+    return {
+        "verified": False,
+        "error": "connection refused",
+        "mismatched": [],
+        "checked": [],
+        "fetched_at": "2026-11-17T00:00:00+00:00",
+    }
 
 
 def test_register_with_probe_stores_verified(client, monkeypatch):
@@ -147,7 +168,7 @@ def test_register_probe_failure_is_not_a_registration_failure(client, monkeypatc
 
     monkeypatch.setattr(app_module, "probe_agent", lambda card, **kw: _dead_probe())
     resp = client.post("/agents?probe=true", json=CARD)
-    assert resp.status_code == 200                 # still registered
+    assert resp.status_code == 200  # still registered
     got = client.get("/agents/resume-screener").json()
     assert got["verified"] is False
     assert "connection refused" in got["probe"]["error"]
@@ -156,7 +177,7 @@ def test_register_probe_failure_is_not_a_registration_failure(client, monkeypatc
 def test_register_without_probe_stays_unprobed(client):
     client.post("/agents", json=CARD)
     got = client.get("/agents/resume-screener").json()
-    assert got["verified"] is None                 # self-reported only
+    assert got["verified"] is None  # self-reported only
 
 
 def test_reprobe_endpoint(client, monkeypatch):
@@ -192,7 +213,7 @@ def test_probe_fields_survive_replay(client, tmp_path):
     c.post("/agents", json=CARD)
     reg = AgentRegistry(persistence_path=path)
     agent = reg.get("resume-screener")
-    assert agent.verified is None                  # unprobed card replays clean
+    assert agent.verified is None  # unprobed card replays clean
 
 
 def _card():

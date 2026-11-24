@@ -26,9 +26,9 @@ class RegisteredAgent(BaseModel):
     card: AgentCard
     registered_at: str
     last_heartbeat: str
-    verified: bool | None = None          # None = never probed (self-reported only)
+    verified: bool | None = None  # None = never probed (self-reported only)
     last_probe: str | None = None
-    probe: dict | None = None             # bounded verdict from probe.probe_agent
+    probe: dict | None = None  # bounded verdict from probe.probe_agent
 
     def heartbeat_age_seconds(self, now: datetime | None = None) -> float:
         now = now or datetime.now(timezone.utc)

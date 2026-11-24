@@ -51,16 +51,23 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
             result = probe_agent(card)
             reg.record_probe(agent.card.name, result)
             agent = reg.get(agent.card.name)
-            out.update({"verified": agent.verified, "last_probe": agent.last_probe,
-                        "probe": agent.probe})
+            out.update(
+                {
+                    "verified": agent.verified,
+                    "last_probe": agent.last_probe,
+                    "probe": agent.probe,
+                }
+            )
         return out
 
     def _agent_view(agent) -> dict:
-        return {"card": agent.card.model_dump(mode="json"),
-                "last_heartbeat": agent.last_heartbeat,
-                "verified": agent.verified,
-                "last_probe": agent.last_probe,
-                "probe": agent.probe}
+        return {
+            "card": agent.card.model_dump(mode="json"),
+            "last_heartbeat": agent.last_heartbeat,
+            "verified": agent.verified,
+            "last_probe": agent.last_probe,
+            "probe": agent.probe,
+        }
 
     @app.post("/agents/{name}/probe")
     def reprobe(name: str) -> dict:
@@ -70,8 +77,12 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
         result = probe_agent(agent.card)
         reg.record_probe(name, result)
         agent = reg.get(name)
-        return {"name": name, "verified": agent.verified,
-                "last_probe": agent.last_probe, "probe": agent.probe}
+        return {
+            "name": name,
+            "verified": agent.verified,
+            "last_probe": agent.last_probe,
+            "probe": agent.probe,
+        }
 
     @app.get("/agents/{name}/history")
     def history(name: str) -> dict:
@@ -84,9 +95,13 @@ def create_app(registry: AgentRegistry | None = None) -> FastAPI:
     def list_agents(include_stale: bool = False) -> list[dict]:
         out = []
         for agent in reg.list(include_stale=include_stale):
-            out.append({"card": agent.card.model_dump(mode="json"),
-                        "stale": agent.heartbeat_age_seconds() > reg.stale_after_seconds,
-                        "verified": agent.verified})
+            out.append(
+                {
+                    "card": agent.card.model_dump(mode="json"),
+                    "stale": agent.heartbeat_age_seconds() > reg.stale_after_seconds,
+                    "verified": agent.verified,
+                }
+            )
         return out
 
     @app.get("/agents/{name}")

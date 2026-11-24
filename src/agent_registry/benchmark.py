@@ -5,6 +5,7 @@ per response, per-category scores, and bounded failure detail. Scoring is
 rule-based (required/forbidden terms), so the same run is reproducible and
 no judge model is on the path.
 """
+
 from __future__ import annotations
 
 import time
@@ -25,7 +26,11 @@ class BenchmarkCase:
     max_latency_s: float | None = None
 
     def __post_init__(self) -> None:
-        if not self.case_id.strip() or not self.prompt.strip() or not self.category.strip():
+        if (
+            not self.case_id.strip()
+            or not self.prompt.strip()
+            or not self.category.strip()
+        ):
             raise ValueError("case_id, prompt and category must be non-empty")
         if not self.required_terms or any(not t.strip() for t in self.required_terms):
             raise ValueError("required_terms must contain non-empty terms")
@@ -87,8 +92,15 @@ def run_benchmark(
         except Exception as exc:  # a broken agent is a failed case, not a crash
             output = ""
             latency = clock() - started
-            results.append(CaseResult(case.case_id, case.category, False,
-                                      round(latency, 4), f"error: {exc}"))
+            results.append(
+                CaseResult(
+                    case.case_id,
+                    case.category,
+                    False,
+                    round(latency, 4),
+                    f"error: {exc}",
+                )
+            )
             continue
         results.append(_score(case, str(output), clock() - started))
 
@@ -111,8 +123,12 @@ def run_benchmark(
         "p95_latency_s": latencies[index],
         "categories": dict(sorted(categories.items())),
         "failures": [
-            {"case_id": r.case_id, "category": r.category,
-             "latency_s": r.latency_s, "reason": r.reason}
+            {
+                "case_id": r.case_id,
+                "category": r.category,
+                "latency_s": r.latency_s,
+                "reason": r.reason,
+            }
             for r in failures
         ],
     }

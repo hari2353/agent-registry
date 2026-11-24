@@ -33,7 +33,9 @@ def client(tmp_path):
     from agent_registry.app import create_app
     from agent_registry.registry import AgentRegistry
 
-    return TestClient(create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl")))
+    return TestClient(
+        create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl"))
+    )
 
 
 def test_unreachable_probe_carries_code_and_fix() -> None:
@@ -59,7 +61,8 @@ def test_bad_scheme_is_a_typed_diagnostic() -> None:
 
 def test_invalid_json_has_its_own_code() -> None:
     result = probe_module.probe_agent(
-        _card(), transport=lambda url, **kw: "not a json object")
+        _card(), transport=lambda url, **kw: "not a json object"
+    )
     assert result["diagnostic"]["code"] == "REG_PROBE_INVALID_JSON"
 
 

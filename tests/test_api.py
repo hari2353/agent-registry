@@ -8,14 +8,19 @@ def client(tmp_path):
     from agent_registry.app import create_app
     from agent_registry.registry import AgentRegistry
 
-    return TestClient(create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl")))
+    return TestClient(
+        create_app(registry=AgentRegistry(persistence_path=tmp_path / "a.jsonl"))
+    )
 
 
 def sample_card():
     return {
         "name": "resume-screener",
         "url": "http://screener.local/a2a",
-        "skills": [{"name": "Python", "confidence": 0.9}, {"name": "Docker", "confidence": 0.8}],
+        "skills": [
+            {"name": "Python", "confidence": 0.9},
+            {"name": "Docker", "confidence": 0.8},
+        ],
         "capabilities": ["screening"],
     }
 

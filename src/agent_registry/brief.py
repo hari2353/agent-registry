@@ -19,8 +19,9 @@ _PARTIAL_THRESHOLD = 0.5
 
 
 def _tokens(text: str) -> set[str]:
-    return {t for t in _TOKEN_RE.findall((text or "").casefold())
-            if t not in _MATCH_STOP}
+    return {
+        t for t in _TOKEN_RE.findall((text or "").casefold()) if t not in _MATCH_STOP
+    }
 
 
 def match_score(skill: str, card) -> float:
@@ -40,16 +41,26 @@ class SkillGap(Exception):
     pass
 
 
-def infer_required_skills(text: str, context_type: str = "job_description", transport=None) -> list[str]:
+def infer_required_skills(
+    text: str, context_type: str = "job_description", transport=None
+) -> list[str]:
     payload = {"text": text, "context_type": context_type}
     if transport is not None:
-        return [s["canonical_name"] for s in transport("/v1/skills/infer", payload)["skills"]]
+        return [
+            s["canonical_name"]
+            for s in transport("/v1/skills/infer", payload)["skills"]
+        ]
     resp = httpx.post(f"{ENGINE_URL}/v1/skills/infer", json=payload, timeout=60.0)
     resp.raise_for_status()
     return [s["canonical_name"] for s in resp.json()["skills"]]
 
 
-def build_brief(registry: AgentRegistry, topic: str, context_type: str = "job_description", engine_transport=None) -> dict:
+def build_brief(
+    registry: AgentRegistry,
+    topic: str,
+    context_type: str = "job_description",
+    engine_transport=None,
+) -> dict:
     required = infer_required_skills(topic, context_type, engine_transport)
     recommended: list[dict] = []
     covered: set[str] = set()
@@ -61,8 +72,14 @@ def build_brief(registry: AgentRegistry, topic: str, context_type: str = "job_de
             if score < _PARTIAL_THRESHOLD:
                 continue
             # confidence is only defined for an exact skill-name entry
-            conf = next((s.confidence for s in agent.card.skills
-                         if s.name.casefold() == skill_cf), 0.0)
+            conf = next(
+                (
+                    s.confidence
+                    for s in agent.card.skills
+                    if s.name.casefold() == skill_cf
+                ),
+                0.0,
+            )
             scored.append((score, conf, agent))
         if not scored:
             continue
@@ -71,17 +88,24 @@ def build_brief(registry: AgentRegistry, topic: str, context_type: str = "job_de
         # "exact" = the card lists the skill by name; fuzzy text matches are
         # partial even at full token coverage
         exact = any(s.name.casefold() == skill_cf for s in best.card.skills)
-        recommended.append({"skill": skill, "agent": best.card.name,
-                            "url": best.card.url,
-                            "match": "exact" if exact else "partial",
-                            "score": score})
+        recommended.append(
+            {
+                "skill": skill,
+                "agent": best.card.name,
+                "url": best.card.url,
+                "match": "exact" if exact else "partial",
+                "score": score,
+            }
+        )
         covered.add(skill)
     gaps = [s for s in required if s not in covered]
     pct = round(100 * len(covered) / len(required)) if required else 0
     summary_bits = []
     if recommended:
-        summary_bits.append(f"{len(recommended)} of {len(required)} required "
-                            f"skills covered by registered agents ({pct}%)")
+        summary_bits.append(
+            f"{len(recommended)} of {len(required)} required "
+            f"skills covered by registered agents ({pct}%)"
+        )
     else:
         summary_bits.append("no registered agents cover the required skills")
     if gaps:
