@@ -10,10 +10,6 @@ Tradeoff, stated plainly: compaction truncates the event history with it
 fleet's history window stays large, disk stays bounded.
 """
 
-import json
-
-import pytest
-
 
 def _mk(tmp_path, **kw):
     from agent_registry.registry import AgentRegistry

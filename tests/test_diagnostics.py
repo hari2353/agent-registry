@@ -2,7 +2,6 @@
 code, a plain-language fix, and a docs pointer.
 """
 
-import json
 from pathlib import Path
 
 import pytest
