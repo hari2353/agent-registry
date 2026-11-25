@@ -42,7 +42,12 @@ report = run_benchmark(
 
 An agent exception becomes a failed case, not a crashed benchmark.
 
-## Tool-use evaluation (cloud agent-skill benchmarks cross-pollination)\n\n`agent_registry.tool_eval.tool_use_score` scores whether an agent invoked the\nexpected tools with the expected arguments (precision/recall/F1, exact match),\nwithout a judge model.\n\n## Design notes
+## Tool-use evaluation (cloud agent-skill benchmarks cross-pollination)\n\n`agent_registry.tool_eval.tool_use_score` scores whether an agent invoked the\nexpected tools with the expected arguments (precision/recall/F1, exact match),\nwithout a judge model.\n\n## LLM eval metrics (confident-ai deepeval cross-pollination)
+
+`agent_registry.llm_eval` provides faithfulness, answer relevance, context
+precision and recall using token overlap, no judge model.
+
+## Design notes
 
 - Registry is append-only JSONL with op replay (`upsert` / `deregister`) — crash-safe persistence without a DB; auto-compacted to a snapshot after 1000 ops
 - Staleness is time-based (`stale_after_seconds`, default 15 min); dead agents drop out of discovery automatically
